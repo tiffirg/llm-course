@@ -1,3 +1,4 @@
+import math
 import torch
 
 
@@ -20,4 +21,41 @@ def scaled_dot_product_gqa(
             - (Optional) Attention weights with shape [batch size; num heads; seq len; kv seq len].
                 Only returned if 'need_weights' is True.
     """
-    pass
+
+    # seq_len, num_heads, hidden_dim = query.shape[1:]
+    # kv_seq_len, num_kv_heads = key.shape[1:3]
+    # key = key.repeat_interleave(num_heads // num_kv_heads, -3)
+    # value = value.repeat_interleave(num_heads // num_kv_heads, -3)
+    # scale_factor = 1 / math.sqrt(hidden_dim)
+
+    # attentions_bias = torch.zeros(seq_len, kv_seq_len, dtype=query.dtype)
+    # if is_causal:
+    #     temp_mask = torch.ones(seq_len, kv_seq_len, dtype=torch.bool).tril(diagonal=0)
+    #     attentions_bias.masked_fill_(temp_mask.logical_not(), float("-inf"))
+    #     attentions_bias.to(query.dtype)
+
+    # attentions = query @ key.transpose(-2, -1) * scale_factor + attentions_bias
+    # attentions = torch.softmax(attentions, dim=-1)
+    # result = attentions @ value
+
+    seq_len, num_heads, hidden_dim = query.shape[1:]
+    kv_seq_len, num_kv_heads = key.shape[1:-1]
+
+    if num_heads % num_kv_heads:
+        raise ValueError('Error params')
+    query = query.permute(0, 2, 1, 3)
+    key = key.repeat_interleave(repeats=num_heads // num_kv_heads, dim=2).permute(0, 2, 1, 3)
+    scale_factor = 1 / math.sqrt(hidden_dim)
+    attns = query @ key.mT * scale_factor
+    if is_causal:
+        temp_mask = torch.triu(torch.ones(seq_len, kv_seq_len), diagonal=1).bool()
+        attns.masked_fill_(temp_mask, float("-inf"))
+        attns.to(query.dtype)
+    attns = torch.softmax(attns, dim=-1)
+    value = value.repeat_interleave(repeats=num_heads // num_kv_heads, dim=2).permute(0, 2, 1, 3)
+    result = (attns @ value).permute(0, 2, 1, 3)
+    if need_weights:
+        return result, attns
+    else:
+        return result
+

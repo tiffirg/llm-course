@@ -29,7 +29,6 @@ def compute_alibi(num_heads: int, seq_len: int) -> torch.Tensor:
         for i in range(seq_len):
             for j in range(seq_len):
                 alibi[k, i, j] = (j - i) / value ** (k + 1)
-
     return alibi
 
 
