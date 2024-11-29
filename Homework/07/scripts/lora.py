@@ -26,9 +26,9 @@ class LoraLayer(Module):
             r (int): Ранг адаптивных слоев, то есть промежуточная размерность.
         """
         super().__init__()
-        self.A = Linear(<ВАШ КОД>, bias=False)
-        self.B = Linear(<ВАШ КОД>, bias=False)
-        self.B.weight.data = <ВАШ КОД>
+        self.A = Linear(in_features, r, bias=False)
+        self.B = Linear(r, out_features, bias=False)
+        self.B.weight.data = torch.zeros(out_features, r)
 
     def forward(self, x: Tensor):
         """
@@ -42,7 +42,7 @@ class LoraLayer(Module):
         Возвращает:
             Tensor: Тензор с размерностью `out_features` после прохождения через слои A и B.
         """
-        return <ВАШ КОД>
+        return self.B(self.A(x))
 
     def load(self, a_weights: Tensor, b_weights: Tensor) -> None:
         """
@@ -66,5 +66,5 @@ def merge(linear_layer: Linear, lora_layer: LoraLayer) -> None:
         linear_layer (Linear): Основной линейный слой, к которому добавляются адаптивные параметры.
         lora_layer (LoraLayer): LoraLayer, веса которого объединяются с основным линейным слоем.
     """
-    delta = <ВАШ КОД>
+    delta = lora_layer.B.weight.data @ lora_layer.A.weight.data
     linear_layer.weight.data += delta
