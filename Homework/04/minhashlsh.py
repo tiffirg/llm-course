@@ -14,8 +14,16 @@ class MinHashLSH(MinHash):
         '''
         Возвращает массив из бакетов, где каждый бакет представляет собой N строк матрицы сигнатур.
         '''
-        # TODO:
-        return 
+        result, left = [], 0
+        step = len(minhash) // self.num_buckets
+        num = min(self.num_buckets, len(minhash))
+        for i in range(num):
+            cur_len = step
+            if (len(minhash) - left) % (self.num_buckets - i) != 0:
+                cur_len += 1
+            result.append(minhash[left:left + cur_len])
+            left += cur_len
+        return result
     
     def get_similar_candidates(self, buckets) -> list[tuple]:
         '''
@@ -23,8 +31,14 @@ class MinHashLSH(MinHash):
         Кандидаты похожи, если полностью совпадают мин хеши хотя бы в одном из бакетов.
         Возвращает список из таплов индексов похожих документов.
         '''
-        # TODO:
-        return similar_candidates
+        sim = []
+        amount = len(buckets[0][0])
+        for bucket in buckets:
+            for i in range(amount):
+                for j in range(i + 1, amount):
+                    if np.all(bucket[:, i] == bucket[:, j]):
+                        sim.append((i, j))
+        return list(sim)
         
     def run_minhash_lsh(self, corpus_of_texts: list[str]) -> list[tuple]:
         occurrence_matrix = self.get_occurrence_matrix(corpus_of_texts)
@@ -33,4 +47,3 @@ class MinHashLSH(MinHash):
         similar_candidates = self.get_similar_candidates(buckets)
         
         return set(similar_candidates)
-    
